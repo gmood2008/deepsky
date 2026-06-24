@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# devspace-kit: expose this machine as a DevSpace MCP workspace over a tunnel.
+set -euo pipefail
+
+KIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CMD="${1:-help}"; shift || true
+
+case "$CMD" in
+  bootstrap) exec bash "$KIT_ROOT/scripts/bootstrap.sh" "$@" ;;
+  start)     exec bash "$KIT_ROOT/scripts/start.sh" "$@" ;;
+  stop)      exec bash "$KIT_ROOT/scripts/stop.sh" "$@" ;;
+  status)    exec bash "$KIT_ROOT/scripts/status.sh" "$@" ;;
+  restart)   bash "$KIT_ROOT/scripts/stop.sh" || true; exec bash "$KIT_ROOT/scripts/start.sh" "$@" ;;
+  client)    exec python3 "$KIT_ROOT/client/devspace_client.py" "$@" ;;
+  help|-h|--help)
+    cat <<EOF
+devspace-kit — expose this machine as a DevSpace MCP workspace over a tunnel
+
+Usage: devspace-kit <command> [args]
+
+Commands:
+  bootstrap            Install Node 22, @waishnav/devspace, cloudflared (idempotent)
+  start                Start tunnel (http2) + devspace serve; print public /mcp URL
+  stop                 Stop server and tunnel
+  restart              stop + start
+  status               Show running state and probe /mcp
+  client <subcmd>      OAuth+MCP client (connect | list-tools | call | open | bash)
+
+Env:
+  DEVSPACE_PORT        Local port (default 7676)
+  DEVSPACE_ROOTS       Comma-separated allowed roots (default \$HOME)
+  DEVSPACE_URL         Override public base URL for the client
+  DEVSPACE_OWNER_TOKEN Override owner token for the client
+
+Examples:
+  devspace-kit bootstrap
+  devspace-kit start
+  devspace-kit client list-tools
+  WS=\$(devspace-kit client open /home/ubuntu/repos/myproj)
+  devspace-kit client bash "\$WS" "ls -la && git status -s"
+EOF
+    ;;
+  *) echo "Unknown command: $CMD (try: devspace-kit help)" >&2; exit 1 ;;
+esac
